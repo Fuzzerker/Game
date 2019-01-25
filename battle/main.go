@@ -3,193 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"os"
-	"strconv"
-	"strings"
-)
-
-func main() {
-
-	player := Unit{}
-	player.Name = read("name:")
-	player.Stats.Power = readAsInt("power:")
-	player.Stats.Speed = readAsInt("speed:")
-	player.Stats.Accuracy = readAsInt("acc:")
-	player.Stats.Defense = readAsInt("def:")
-
-	player.MaxHp = player.Stats.Defense
-	player.Hp = player.Stats.Defense
-
-	player.Attacks = append(player.Attacks, Attack{
-		Name: "basic",
-		Type: "Dmg",
-	}, Attack{
-		Name:  "buffAll",
-		Type:  "Buff",
-		Stats: Stats{1, 1, 1, 1},
-	})
-
-	for i := 0; i < 100; i++ {
-		enemy := genUnit(i)
-		fmt.Println("you are fighting", enemy.Name)
-		fmt.Println("your stats", player.Stats)
-		fmt.Println("your attacks", player.Attacks)
-		fmt.Println("enemey", enemy)
-		player, enemy = battle(player, enemy)
-		if player.Hp == 0 {
-			fmt.Println("dead!")
-			read("")
-			os.Exit(0)
-		}
-
-		fmt.Println("killed", enemy.Name)
-		player.MaxHp++
-		player.Hp = player.MaxHp
-		read("enter to continue")
-
-	}
-}
-
-func battle(player Unit, enemy Unit) (Unit, Unit) {
-	player, enemy = playerTurn(player, enemy)
-	if player.Hp <= 0 || enemy.Hp <= 0 {
-		return player, enemy
-	}
-	enemy, player = enemyTurn(enemy, player)
-	if player.Hp <= 0 || enemy.Hp <= 0 {
-		return player, enemy
-	}
-
-	return battle(player, enemy)
-}
-
-func playerTurn(player Unit, enemy Unit) (Unit, Unit) {
-	atk := chooseAttack(player)
-
-	return applyAttack(player, enemy, atk)
-}
-
-func enemyTurn(enemy Unit, player Unit) (Unit, Unit) {
-	atk := Attack{
-		Stats: enemy.Stats,
-		Type:  "Dmg",
-	}
-	return applyAttack(enemy, player, atk)
-}
-
-func chooseAttack(unit Unit) Attack {
-	atkString := read("atk")
-	atak := Attack{}
-	for _, atk := range unit.Attacks {
-		if atk.Name == atkString {
-			atak = atk
-			break
-		}
-
-	}
-
-	if atak.Name == "" {
-		fmt.Println("atk not found")
-		return chooseAttack(unit)
-	}
-
-	atak.Stats = Stats{
-		Power:    atak.Stats.Power + unit.Stats.Power,
-		Speed:    atak.Stats.Speed + unit.Stats.Speed,
-		Defense:  atak.Stats.Defense + unit.Stats.Defense,
-		Accuracy: atak.Stats.Accuracy + unit.Stats.Accuracy,
-	}
-
-	return atak
-}
-
-func genUnit(i int) Unit {
-
-	return Unit{
-		Name:  fmt.Sprintf("goblin%v", i),
-		MaxHp: i,
-		Hp:    i,
-		Stats: Stats{
-			i, i, i, i,
-		},
-	}
-}
-
-func read(msg string) string {
-	fmt.Println(msg)
-	reader := bufio.NewReader(os.Stdin)
-	text, _ := reader.ReadString('\n')
-	text = strings.Replace(text, "\n", "", -1)
-	return text
-}
-
-func readAsInt(msg string) int {
-	str := read(msg)
-
-	i, err := strconv.Atoi(str)
-	if err != nil {
-		return readAsInt("invalid int, try again")
-	}
-
-	return i
-
-}
-
-func applyAttack(attacker Unit, defender Unit, attack Attack) (Unit, Unit) {
-	attackStats := attack.Stats
-	if attack.Type == "Buff" {
-		attacker.Stats.Accuracy += attackStats.Accuracy
-		attacker.Stats.Defense += attackStats.Defense
-		attacker.Stats.Power += attackStats.Power
-		attacker.Stats.Speed += attackStats.Speed
-	} else {
-		if attackStats.Accuracy < attacker.Stats.Speed {
-			fmt.Println(attacker.Name, "missed")
-			return attacker, defender
-		}
-
-		if attack.Type == "Dmg" {
-			dmg := attackStats.Power - defender.Stats.Defense
-			if dmg < 0 {
-				dmg = 0
-			}
-			fmt.Println(attacker.Name, "dealt", dmg)
-			defender.Hp -= dmg
-			return attacker, defender
-		}
-
-	}
-
-	return attacker, defender
-}
-
-type Unit struct {
-	Name    string
-	Stats   Stats
-	XP      int
-	Level   int
-	Hp      int
-	MaxHp   int
-	Attacks []Attack
-}
-
-type Attack struct {
-	Name  string
-	Type  string
-	Stats Stats
-}
-
-type Stats struct {
-	Speed    int
-	Power    int
-	Defense  int
-	Accuracy int
-}
-package main
-
-import (
-	"bufio"
-	"fmt"
 	"math/rand"
 	"os"
 	"sort"
@@ -199,7 +12,7 @@ import (
 )
 
 var validAttrs = []string{
-	"strength", "defense", "speed", "accuracy", "vitality",
+	"strength", "defense", "speed", "accuracy", "vitality", "resistance", "willpower",
 }
 
 func main() {
@@ -224,17 +37,21 @@ type Unit struct {
 
 func (u Unit) Crunch() Unit {
 	u.currentAttributes = Attributes{
-		Strength: u.BaseAttributes.Strength + u.combatAttrMods.Strength,
-		Speed:    u.BaseAttributes.Speed + u.combatAttrMods.Speed,
-		Defense:  u.BaseAttributes.Defense + u.combatAttrMods.Defense,
-		Accuracy: u.BaseAttributes.Accuracy + u.combatAttrMods.Accuracy,
-		Vitality: u.BaseAttributes.Vitality + u.combatAttrMods.Vitality,
+		Strength:   u.BaseAttributes.Strength + u.combatAttrMods.Strength,
+		Speed:      u.BaseAttributes.Speed + u.combatAttrMods.Speed,
+		Defense:    u.BaseAttributes.Defense + u.combatAttrMods.Defense,
+		Accuracy:   u.BaseAttributes.Accuracy + u.combatAttrMods.Accuracy,
+		Vitality:   u.BaseAttributes.Vitality + u.combatAttrMods.Vitality,
+		Willpower:  u.BaseAttributes.Willpower + u.combatAttrMods.Willpower,
+		Resistance: u.BaseAttributes.Resistance + u.combatAttrMods.Resistance,
 	}
 
 	u.currentAttributes.Speed -= u.Fatigue
 	u.currentAttributes.Defense -= int(u.Fatigue / 2)
 	u.currentAttributes.Accuracy -= int(u.Fatigue / 3)
 	u.currentAttributes.Strength -= int(u.Fatigue / 4)
+	u.currentAttributes.Willpower -= u.Fatigue
+	u.currentAttributes.Resistance -= (u.Fatigue - u.currentAttributes.Willpower)
 
 	u.BaseStats.MaxHp = u.currentAttributes.Vitality + int(u.currentAttributes.Defense/2)
 
@@ -262,7 +79,14 @@ func (u Unit) ModSpeed(i int) Unit {
 	u.combatAttrMods.Speed += i
 	return u
 }
-
+func (u Unit) ModWillpower(i int) Unit {
+	u.combatAttrMods.Willpower += i
+	return u
+}
+func (u Unit) ModResistance(i int) Unit {
+	u.combatAttrMods.Resistance += i
+	return u
+}
 func (u Unit) Speed() int {
 	return u.Crunch().currentAttributes.Speed
 }
@@ -281,6 +105,14 @@ func (u Unit) Accuracy() int {
 
 func (u Unit) Vitality() int {
 	return u.Crunch().currentAttributes.Vitality
+}
+
+func (u Unit) Willpower() int {
+	return u.Crunch().currentAttributes.Willpower
+}
+
+func (u Unit) Resistance() int {
+	return u.Crunch().currentAttributes.Resistance
 }
 
 type BaseStats struct {
@@ -302,17 +134,17 @@ type EffectType int
 const (
 	PHYS EffectType = iota
 	MAG
+	SELF
 )
 
 type Attack struct {
 	Name        string
 	FatigueCost int
-	Power       int
+	PowerMod    int
 	Accuracy    int
 	Targets     int
 	Stat        string
 	EffType     EffectType
-	Type        string
 	Team        int
 }
 
@@ -465,7 +297,7 @@ func printUnit(unit Unit) {
 
 func printAttack(atk Attack) {
 	fmt.Println("")
-	fmt.Printf("Chosen Attack: Name: %v. Stat: %v. Pow: %v. Acc: %v. NumTargets: %v. FatCost: %v.\r\n", atk.Name, atk.Stat, atk.Power, atk.Accuracy, atk.Targets, atk.FatigueCost)
+	fmt.Printf("Chosen Attack: Name: %v. Stat: %v. Pow: %v. Acc: %v. NumTargets: %v. FatCost: %v.\r\n", atk.Name, atk.Stat, atk.PowerMod, atk.Accuracy, atk.Targets, atk.FatigueCost)
 	fmt.Println("")
 }
 
@@ -475,7 +307,7 @@ func createPlayer() Unit {
 	weak := readAttr("bad")
 
 	attrs := Attributes{
-		5, 5, 5, 5, 5,
+		5, 5, 5, 5, 5, 5, 5,
 	}
 
 	for _, attr := range validAttrs {
@@ -585,7 +417,7 @@ var atk = 0
 func genUnit(x int, i int, team int) Unit {
 	potentialAtks := getAttacks()
 
-	attrs := Attributes{offset(i), offset(i), offset(i), offset(i), offset(i)}
+	attrs := Attributes{offset(i), offset(i), offset(i), offset(i), offset(i), offset(i), offset(i)}
 
 	unit := CreateUnit(fmt.Sprintf("goblin%v-%v-%v", i, x, abs), attrs)
 	unit.Team = team
@@ -614,7 +446,7 @@ func Turn(active Unit, units []Unit) []Unit {
 	atk := PickAttack(active)
 	printAttack(atk)
 	var targets []Unit
-	if atk.Type == _self {
+	if atk.EffType == SELF {
 		targets = []Unit{active}
 	} else {
 		targets = PickTargets(atk, active.AiLevel, active.Team, active.IsHuman, units)
@@ -703,29 +535,41 @@ func Turn(active Unit, units []Unit) []Unit {
 
 func resolveAttack(attack Attack, unit Unit) AttackResult {
 	//TODO: support magic attacks
-	dmg := 0
 
-	switch attack.Type {
-	case _phys:
+	if attack.Team == unit.Team {
+		return AttackResult{
+			Attr:    attack.Stat,
+			Damange: attack.PowerMod,
+		}
+	}
+
+	if attack.EffType == PHYS {
 		if attack.Accuracy < unit.Speed() {
 			return AttackResult{
 				Attr: "miss",
 			}
 		}
 
-		dmg = attack.Power - unit.Defense()
+		dmg := attack.PowerMod - unit.Defense()
 		if dmg < 0 {
 			dmg = 0
 		}
-	case _buff, _self:
-		dmg = attack.Power
-	case _bane:
-		if attack.Accuracy < unit.Speed() {
-			return AttackResult{
-				Attr: "miss",
-			}
+
+		return AttackResult{
+			Attr:    attack.Stat,
+			Damange: dmg,
 		}
-		dmg = attack.Power - unit.Defense()
+	}
+
+	if attack.Accuracy < unit.Willpower() {
+		return AttackResult{
+			Attr: "miss",
+		}
+	}
+
+	dmg := attack.PowerMod - unit.Resistance()
+	if dmg < 0 {
+		dmg = 0
 	}
 
 	return AttackResult{
@@ -733,13 +577,6 @@ func resolveAttack(attack Attack, unit Unit) AttackResult {
 		Damange: dmg,
 	}
 
-}
-
-func (u Unit) getModifiers() AttackMod {
-	return AttackMod{
-		u.Strength(),
-		u.Accuracy(),
-	}
 }
 
 func PickTargets(atk Attack, lvl int, team int, human bool, units []Unit) []Unit {
@@ -765,10 +602,12 @@ func PickAttack(unit Unit) Attack {
 	}
 	atk.Team = unit.Team
 	//TODO: phys vs mag
-	if atk.EffType == Phys {
-		mods := unit.getModifiers()
-		atk.Power += mods.PowerMod
-		atk.Accuracy += mods.AccMod
+	if atk.EffType == PHYS {
+		atk.PowerMod += unit.Strength()
+		atk.Accuracy += unit.Accuracy()
+	} else {
+		atk.PowerMod += unit.Willpower()
+		atk.Accuracy += int((unit.Willpower() + unit.Resistance()) / 2)
 	}
 
 	return atk
@@ -820,7 +659,7 @@ func npcPickTargets(atk Attack, lvl int, team int, units []Unit) []Unit {
 			randUnit := randomInt(0, len(units)-1)
 			targets = append(targets, units[randUnit])
 		} else {
-			targets = append(targets, findFirstValidTarget(atk.Type, team, units))
+			targets = append(targets, findFirstValidTarget(atk.PowerMod, team, units))
 		}
 
 	}
@@ -829,18 +668,16 @@ func npcPickTargets(atk Attack, lvl int, team int, units []Unit) []Unit {
 
 }
 
-func findFirstValidTarget(typ string, team int, units []Unit) Unit {
+func findFirstValidTarget(power int, team int, units []Unit) Unit {
 	for _, unit := range units {
-		switch typ {
-		case _phys, _bane:
+		if power > 0 {
 			if unit.Team != team {
 				return unit
 			}
-		case _buff:
-			if unit.Team == team {
-				return unit
-			}
+		} else if unit.Team == team {
+			return unit
 		}
+
 	}
 
 	if len(units) < 1 {
